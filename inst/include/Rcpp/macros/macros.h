@@ -27,25 +27,33 @@
 #define RCPP_GET_CLASS(x) Rf_getAttrib(x, R_ClassSymbol)
 
 #ifndef BEGIN_RCPP
-#define BEGIN_RCPP try {
+#define BEGIN_RCPP                                                             \
+  bool __rcppInterrupted = false;                                              \
+  bool __rcppStopped = false;                                                  \
+  try {
 #endif
 
 #ifndef VOID_END_RCPP
 #define VOID_END_RCPP                                                          \
   }                                                                            \
-  catch (Rcpp::internal::InterruptedException &__ex__) {                       \
-    Rf_onintr();                                                               \
+  catch (Rcpp::internal::InterruptedException __ex__) {                        \
+      __rcppInterrupted = true;                                                \
   }                                                                            \
-  catch (std::exception &__ex__) {                                             \
-    forward_exception_to_r(__ex__);                                            \
+  catch (std::exception __ex__) {                                              \
+      __rcppStopped = true;                                                    \
   }                                                                            \
   catch (...) {                                                                \
-    ::Rf_error("c++ exception (unknown reason)");                              \
-  }
+      __rcppStopped = true;                                                    \
+  }                                                                            \
+  if (__rcppInterrupted)                                                       \
+      Rf_onintr();                                                             \
+  if (__rcppStopped)                                                           \
+      Rf_error("Rcpp stopped!\n");
 #endif
 
 #ifndef END_RCPP
-#define END_RCPP VOID_END_RCPP return R_NilValue;
+#define END_RCPP VOID_END_RCPP                                                 \
+   return R_NilValue;
 #endif
 
 #ifndef END_RCPP_RETURN_ERROR
